@@ -6,21 +6,7 @@
     <title>Secure Gov Doc Share</title>
     <link rel="stylesheet" href="styles.css">
 
-    <script type="module">
-        // Import all required Firebase services
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-        import { getStorage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-
-        // Expose the imports globally for app.js (allows us to use these imports globally)
-        window.initializeApp = initializeApp;
-        window.getAuth = getAuth;
-        window.getFirestore = getFirestore;
-        window.getStorage = getStorage;
-    </script>
-
-    <script defer src="app.js"></script> 
+    <script defer type="module" src="app.js"></script> 
 </head>
 <body>
     <div class="container">
@@ -33,7 +19,7 @@
                 <input type="password" id="reg-password" placeholder="Password (Min 6 chars)" required minlength="6">
                 <button type="submit">Register</button>
             </form>
-            <p>Already have an account? <a href="#" onclick="showScreen('login-screen')">Login here</a></p>
+            <p>Already have an account? <a href="#" id="show-login">Login here</a></p>
         </div>
 
         <div id="login-screen" class="auth-screen" style="display: none;">
@@ -43,7 +29,7 @@
                 <input type="password" id="login-password" placeholder="Password" required>
                 <button type="submit">Login</button>
             </form>
-            <p>Don't have an account? <a href="#" onclick="showScreen('register-screen')">Register here</a></p>
+            <p>Don't have an account? <a href="#" id="show-register">Register here</a></p>
         </div>
 
         <div id="dashboard-screen" style="display: none;">
@@ -57,7 +43,7 @@
             </div>
             <hr>
             <h2>My Documents</h2>
-            </div>
+        </div>
     </div>
 </body>
 </html>
