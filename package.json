@@ -1,8 +1,16 @@
 {
-  "dependencies": {
-    "firebase-tools": "^14.19.1"
-  },
+  "name": "firebase-web-project",
+  "version": "1.0.0",
+  "description": "A quick Firebase setup with modular SDK.",
+  "main": "main.js",
   "scripts": {
-    "build": "echo 'No build step required for this project.'"
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "firebase": "^11.6.1" 
+    /* The version number might differ */
   }
 }
