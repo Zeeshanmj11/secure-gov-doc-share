@@ -3,47 +3,612 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secure Gov Doc Share</title>
-    <link rel="stylesheet" href="styles.css">
-
-    <script defer type="module" src="app.js"></script> 
+    <title>Secure & Share Govt Document Keeper</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f7f9fb; }
+        .card { background-color: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); }
+        .btn-primary { background-color: #007bff; color: white; transition: background-color 0.2s; }
+        .btn-primary:hover:not(:disabled) { background-color: #0056b3; }
+        .doc-item { border-left: 4px solid #007bff; }
+        .modal-bg { background-color: rgba(0, 0, 0, 0.7); }
+        .custom-modal { z-index: 60; position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+        .status-log { 
+            position: fixed; 
+            bottom: 1rem; 
+            right: 1rem; 
+            background: #1f2937; /* Dark Gray */
+            color: white; 
+            padding: 0.75rem 1.25rem; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 70;
+            max-width: 90%;
+            transition: opacity 0.5s ease;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <div id="register-screen" class="auth-screen">
-            <h2>New Citizen Registration</h2>
-            <form id="register-form">
-                <input type="text" id="reg-name" placeholder="Full Name" required>
-                <input type="text" id="reg-aadhaar" placeholder="Aadhaar Number (12 digits)" pattern="\d{12}" title="Aadhaar must be 12 digits" required>
-                <input type="email" id="reg-email" placeholder="Email" required>
-                <input type="password" id="reg-password" placeholder="Password (Min 6 chars)" required minlength="6">
-                <button type="submit">Register</button>
-            </form>
-            <p>Already have an account? <a href="#" id="show-login">Login here</a></p>
+    <div id="app" class="min-h-screen p-4 sm:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">Govt Document Keeper</h1>
+            <p class="text-gray-600">Secure Digital Archive & Sharing Platform</p>
+        </header>
+
+        <div id="auth-container" class="max-w-md mx-auto card p-6 mb-8 hidden">
+            <h2 id="auth-title" class="text-2xl font-semibold mb-4 text-center">User Registration</h2>
+            <div id="auth-message" class="text-red-600 bg-red-100 p-3 rounded-lg mb-4 hidden"></div>
+            <input type="email" id="email" placeholder="Email" class="w-full p-3 mb-4 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+            <input type="password" id="password" placeholder="Password (min 6 characters)" class="w-full p-3 mb-4 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+            <button id="auth-button" class="w-full p-3 btn-primary rounded-lg text-lg font-semibold mb-3">Register</button>
+            <p class="text-center text-sm">
+                <a href="#" id="toggle-auth" class="text-blue-600 hover:underline">Already have an account? Login</a>
+            </p>
         </div>
 
-        <div id="login-screen" class="auth-screen" style="display: none;">
-            <h2>Citizen Login</h2>
-            <form id="login-form">
-                <input type="email" id="login-email" placeholder="Email" required>
-                <input type="password" id="login-password" placeholder="Password" required>
-                <button type="submit">Login</button>
-            </form>
-            <p>Don't have an account? <a href="#" id="show-register">Register here</a></p>
-        </div>
-
-        <div id="dashboard-screen" style="display: none;">
-            <header>
-                <h1>Secure Document Hub</h1>
-                <button id="logout-btn">Logout</button>
-            </header>
-            <div id="user-info">
-                Welcome, <span id="user-display-name">Citizen</span> (<span id="user-display-email"></span>)
-                <p>Your Aadhaar: <strong id="user-display-aadhaar">Loading...</strong></p>
+        <div id="main-content" class="max-w-4xl mx-auto hidden">
+            <div id="user-profile" class="flex flex-col sm:flex-row justify-between items-center mb-6 p-4 card border-b-4 border-indigo-500">
+                <div class="text-gray-700 mb-4 sm:mb-0">
+                    <p class="text-lg font-semibold text-indigo-700">My Profile</p>
+                    <p class="text-sm">Email: <span id="user-email" class="font-medium">...</span></p>
+                    <p class="text-sm">User ID (UID): <span id="user-uid" class="font-mono text-xs bg-gray-100 p-1 rounded">...</span></p>
+                </div>
+                <button id="logout-button" class="p-2 w-full sm:w-auto bg-red-500 text-white rounded-lg hover:bg-red-600 transition">Logout</button>
             </div>
-            <hr>
-            <h2>My Documents</h2>
+
+            <div class="p-6 card mb-8">
+                <h2 class="text-xl font-semibold mb-4 text-blue-700">Upload New Government Document</h2>
+                <input type="file" id="document-file" class="w-full p-2 border border-gray-300 rounded-lg mb-4">
+                <button id="upload-button" class="p-3 btn-primary rounded-lg font-semibold w-full sm:w-auto disabled:opacity-50" disabled>Upload & Secure</button>
+                <div id="upload-progress" class="mt-4 text-sm text-gray-600 hidden">Uploading...</div>
+            </div>
+
+            <div class="p-6 card">
+                <h2 class="text-xl font-semibold mb-4 text-blue-700">Your Secured Documents</h2>
+                <div id="document-list" class="space-y-4">
+                    <p id="loading-message" class="text-center text-gray-500">Awaiting authentication to load documents...</p>
+                </div>
+            </div>
         </div>
+
+        <div id="share-modal" class="custom-modal modal-bg hidden">
+            <div class="card p-8 w-full max-w-lg mx-4">
+                <h3 class="text-2xl font-semibold mb-4 text-green-700">Share Document</h3>
+                <p class="mb-4 text-gray-600">Enter the **User ID (UID)** of the family member to grant access to this document.</p>
+                <input type="text" id="share-uid-input" placeholder="Recipient's User ID (UID)" class="w-full p-3 mb-4 border border-gray-300 rounded-lg">
+                <div id="share-message" class="mb-4 text-sm hidden"></div>
+                <div class="flex justify-end space-x-3">
+                    <button id="cancel-share-btn" class="p-3 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition">Cancel</button>
+                    <button id="confirm-share-btn" class="p-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition disabled:opacity-50" disabled>Confirm Share</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="delete-confirm-modal" class="custom-modal modal-bg hidden">
+            <div class="card p-6 w-full max-w-sm mx-4">
+                <h4 class="text-xl font-semibold text-red-600 mb-4">Confirm Deletion</h4>
+                <p id="confirm-message" class="mb-6 text-gray-700">Are you sure you want to delete this document? This action cannot be undone and will remove the file from storage.</p>
+                <div class="flex justify-end space-x-3">
+                    <button id="delete-cancel-btn" class="p-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition">Cancel</button>
+                    <button id="delete-confirm-btn" class="p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">Delete Permanently</button>
+                </div>
+            </div>
+        </div>
+        
     </div>
+    <div id="log-display" class="status-log hidden"></div>
+
+    <script src="./firebase-config.js"></script> 
+
+
+    <script type="module">
+        // --- Firebase Imports ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, connectAuthEmulator } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, collection, onSnapshot, addDoc, deleteDoc, updateDoc, serverTimestamp, arrayUnion, setLogLevel, connectFirestoreEmulator } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytesResumable, deleteObject, getDownloadURL, connectStorageEmulator } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+        
+        // --- GLOBAL VARIABLES (Now provided by firebase-config.js) ---
+        
+        const rawAppId = typeof window.__app_id !== 'undefined' ? window.__app_id : 'default-app-id';
+        const appId = rawAppId.replace(/\//g, '-');
+        
+        let firebaseConfig = null;
+        try {
+            // Check the window object for the stringified config and parse it.
+            if (typeof window.__firebase_config !== 'undefined' && typeof window.__firebase_config === 'string' && window.__firebase_config.length > 0) {
+                firebaseConfig = JSON.parse(window.__firebase_config);
+            }
+        } catch (e) {
+            console.error("Failed to parse __firebase_config from window object:", e);
+        }
+        
+        const initialAuthToken = typeof window.__initial_auth_token !== 'undefined' ? window.__initial_auth_token : null;
+        
+        let app, db, auth, storage, userId = null;
+        let isLoginMode = false; 
+        let isAuthReady = false; 
+        let currentDeleteParams = {}; 
+        let currentShareDocId = null; 
+
+        // --- CORE UTILITIES ---
+        
+        /**
+         * Logs actions to the console and a temporary UI display.
+         */
+        function logAction(actionType, details) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logMessage = `[${timestamp}] [${actionType}] ${details.message || ''}`;
+            console.info(logMessage, details);
+
+            // Display log in the UI for 3 seconds
+            const logDisplayEl = document.getElementById('log-display');
+            if (logDisplayEl) { // Added null check for robustness
+                logDisplayEl.textContent = logMessage;
+                logDisplayEl.classList.remove('hidden');
+                setTimeout(() => logDisplayEl.classList.add('hidden'), 3000);
+            }
+        }
+
+        /**
+         * Constructs the Firestore collection path.
+         */
+        function getDocumentsCollectionRef() {
+            return collection(db, 'artifacts', appId, 'public', 'data', 'documents');
+        }
+
+        /**
+         * Constructs the secure path for Firebase Storage binary data.
+         */
+        function getStoragePath(fileName, ownerId) {
+            const uniqueFileName = `${Date.now()}_${fileName.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+            return `files/${appId}/${ownerId}/${uniqueFileName}`;
+        }
+
+        /**
+         * Simple utility to format file size for display.
+         */
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+
+        // --- FIREBASE INITIALIZATION AND AUTH ---
+
+        async function initFirebase() {
+            if (!firebaseConfig) {
+                logAction('FIREBASE_ERROR', { message: "Configuration is missing. Cannot initialize Firebase." });
+                const loadingMessage = document.getElementById('loading-message');
+                if (loadingMessage) {
+                    loadingMessage.textContent = 'FATAL: Firebase configuration not found. Ensure firebase-config.js is correctly linked and configured.';
+                }
+                return;
+            }
+
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                storage = getStorage(app);
+                
+                // CRITICAL FIX: Connect to Local Emulators
+                if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+                    logAction('EMULATOR_CONNECT', { message: "Connecting to Firebase Emulators..." });
+                    
+                    connectAuthEmulator(auth, "http://localhost:9100");
+                    connectFirestoreEmulator(db, "localhost", 8078);
+                    connectStorageEmulator(storage, "localhost", 9198);
+                }
+
+                setLogLevel('debug');
+                
+                logAction('FIREBASE_INIT', { message: "Firebase services initialized." });
+
+                const authenticationPromise = initialAuthToken
+                    ? signInWithCustomToken(auth, initialAuthToken)
+                    : signInAnonymously(auth);
+
+                await authenticationPromise.catch(e => {
+                    logAction('AUTH_TOKEN_FAIL', { message: e.message });
+                });
+
+                // Listen for authentication state changes
+                onAuthStateChanged(auth, (user) => {
+                    isAuthReady = true;
+                    if (user) {
+                        userId = user.uid;
+                        document.getElementById('user-email').textContent = user.email || 'Anonymous User';
+                        document.getElementById('user-uid').textContent = userId;
+                        
+                        document.getElementById('auth-container').classList.add('hidden');
+                        document.getElementById('main-content').classList.remove('hidden');
+                        document.getElementById('upload-button').disabled = false;
+                        logAction('AUTH_STATE_CHANGE', { message: "User signed in.", uid: userId });
+                        setupDocumentListener(); 
+                    } else {
+                        userId = null;
+                        document.getElementById('auth-container').classList.remove('hidden');
+                        document.getElementById('main-content').classList.add('hidden');
+                        document.getElementById('upload-button').disabled = true;
+                        document.getElementById('loading-message').textContent = 'Please register or log in.';
+                        toggleAuthMode(false);
+                        logAction('AUTH_STATE_CHANGE', { message: "User signed out." });
+                    }
+                });
+
+            } catch (error) {
+                logAction('FIREBASE_ERROR', { message: `Initialization failed: ${error.message}` });
+            }
+        }
+
+        // --- AUTHENTICATION HANDLERS ---
+
+        function toggleAuthMode(toLogin) {
+            isLoginMode = toLogin;
+            document.getElementById('auth-title').textContent = isLoginMode ? 'User Login' : 'User Registration (Verify OTP Simulated)';
+            document.getElementById('auth-button').textContent = isLoginMode ? 'Login' : 'Register';
+            document.getElementById('toggle-auth').textContent = isLoginMode ? 'Need an account? Register' : 'Already have an account? Login';
+            document.getElementById('auth-message').classList.add('hidden');
+            logAction('AUTH_UI_TOGGLE', { mode: isLoginMode ? 'Login' : 'Register' });
+        }
+
+        async function handleAuthAction() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const messageEl = document.getElementById('auth-message');
+            messageEl.classList.add('hidden');
+            
+            if (!email || !password) {
+                messageEl.textContent = "Please enter both email and password.";
+                messageEl.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                if (!isLoginMode) {
+                    await createUserWithEmailAndPassword(auth, email, password);
+                    logAction('AUTH_REGISTER', { message: `Successfully registered user: ${email}` });
+                    messageEl.textContent = "Registration successful! You are now logged in.";
+                    messageEl.classList.remove('text-red-600', 'bg-red-100');
+                    messageEl.classList.add('text-green-600', 'bg-green-100');
+                    messageEl.classList.remove('hidden');
+                } else {
+                    await signInWithEmailAndPassword(auth, email, password);
+                    logAction('AUTH_LOGIN', { message: `Successfully logged in user: ${email}` });
+                }
+            } catch (error) {
+                const errorMessage = error.message.replace('Firebase: ', '').replace(' (auth/', ' (').replace(').', '').replace(/-/g, ' ');
+                messageEl.textContent = `Auth Error: ${errorMessage}`;
+                messageEl.classList.remove('hidden');
+                messageEl.classList.remove('text-green-600', 'bg-green-100');
+                messageEl.classList.add('text-red-600', 'bg-red-100');
+                logAction('AUTH_ERROR', { action: isLoginMode ? 'Login' : 'Register', message: error.message });
+            }
+        }
+
+        // --- DOCUMENT LISTENER ---
+
+        function setupDocumentListener() {
+            if (!isAuthReady || !db || !userId) return;
+
+            const documentsCollectionRef = getDocumentsCollectionRef();
+
+            onSnapshot(documentsCollectionRef, (snapshot) => {
+                const documents = [];
+                const loadingMessage = document.getElementById('loading-message');
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const isOwner = data.ownerId === userId;
+                    const isShared = data.sharedWith && Array.isArray(data.sharedWith) && data.sharedWith.includes(userId);
+
+                    if (isOwner || isShared) {
+                        documents.push({ id: doc.id, ...data, isOwner });
+                    }
+                });
+
+                if (loadingMessage) loadingMessage.classList.add('hidden');
+                renderDocumentList(documents);
+                logAction('DOC_LIST_UPDATE', { count: documents.length, message: 'Real-time document list updated.' });
+
+            }, (error) => {
+                console.error("Error listening to documents:", error);
+                logAction('DOC_LIST_ERROR', { message: error.message });
+                const listEl = document.getElementById('document-list');
+                if (listEl) {
+                    listEl.innerHTML = `<p class="text-center text-red-500">Error fetching documents: ${error.message}</p>`;
+                }
+            });
+        }
+        
+        // --- DATA RENDERER ---
+
+        function renderDocumentList(documents) {
+            const listEl = document.getElementById('document-list');
+            listEl.innerHTML = '';
+            
+            if (documents.length === 0) {
+                listEl.innerHTML = '<p class="text-center text-gray-500">No documents found. Upload your first document!</p>';
+                return;
+            }
+
+            documents.sort((a, b) => (b.uploadedAt?.toMillis() || 0) - (a.uploadedAt?.toMillis() || 0)); 
+
+            documents.forEach(doc => {
+                const uploadedDate = doc.uploadedAt?.toDate()?.toLocaleDateString() || 'N/A';
+                const sharedCount = doc.sharedWith?.length || 0;
+                
+                let statusBadge = '';
+                if (!doc.isOwner) {
+                    statusBadge = `<span class="text-xs bg-purple-100 text-purple-700 font-medium p-1 rounded-full">Shared by ${doc.ownerId.substring(0, 4)}...</span>`;
+                } else if (sharedCount > 0) {
+                     statusBadge = `<span class="text-xs bg-yellow-100 text-yellow-700 font-medium p-1 rounded-full">Shared with ${sharedCount} other(s)</span>`;
+                } else {
+                     statusBadge = `<span class="text-xs bg-gray-100 text-gray-500 font-medium p-1 rounded-full">Private</span>`;
+                }
+
+
+                const docEl = document.createElement('div');
+                docEl.className = 'doc-item p-4 card flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-4 transition hover:shadow-lg';
+                docEl.innerHTML = `
+                    <div class="w-full sm:w-auto overflow-hidden">
+                        <p class="text-lg font-medium text-gray-800 truncate">${doc.fileName}</p>
+                        <div class="flex items-center space-x-2 text-sm text-gray-500">
+                            <span>Uploaded: ${uploadedDate}</span>
+                            <span>|</span>
+                            <span>Size: ${formatBytes(doc.size)}</span>
+                        </div>
+                        <div class="mt-2">${statusBadge}</div>
+                    </div>
+                    <div class="flex flex-wrap space-x-2 w-full sm:w-auto justify-end">
+                        <a href="${doc.downloadURL}" target="_blank" class="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition text-sm">Download</a>
+                        ${doc.isOwner ? `<button data-id="${doc.id}" data-filename="${doc.fileName}" data-ownerid="${doc.ownerId}" class="share-btn p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition text-sm">Share Doc</button>` : ''}
+                        ${doc.isOwner ? `<button data-id="${doc.id}" data-filename="${doc.fileName}" data-ownerid="${doc.ownerId}" class="delete-btn p-2 bg-red-500 text-white rounded-lg hover:bg-red-700 transition text-sm">Delete Doc</button>` : ''}
+                    </div>
+                `;
+                listEl.appendChild(docEl);
+            });
+
+            // Re-attach event listeners after rendering
+            listEl.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.onclick = (e) => prepareDeleteConfirmation(e.target.dataset.id, e.target.dataset.filename, e.target.dataset.ownerid);
+            });
+            listEl.querySelectorAll('.share-btn').forEach(btn => {
+                btn.onclick = (e) => showShareModal(e.target.dataset.id, e.target.dataset.filename);
+            });
+        }
+
+        // --- CRUD OPERATIONS ---
+
+        async function handleFileUpload() {
+            if (!userId) return;
+
+            const fileInput = document.getElementById('document-file');
+            const file = fileInput.files[0];
+            const progressEl = document.getElementById('upload-progress');
+            progressEl.classList.remove('hidden');
+
+            if (!file) {
+                logAction('DOC_UPLOAD_WARN', { message: 'No file selected.' });
+                progressEl.textContent = 'Please select a file to upload.';
+                setTimeout(() => progressEl.classList.add('hidden'), 3000);
+                return;
+            }
+
+            const MAX_SIZE_BYTES = 20 * 1024 * 1024;
+            if (file.size > MAX_SIZE_BYTES) {
+                 logAction('DOC_UPLOAD_ERROR', { message: 'File size exceeds 20MB limit.' });
+                 progressEl.textContent = 'File too large (Max 20MB).';
+                 setTimeout(() => progressEl.classList.add('hidden'), 4000);
+                 return;
+            }
+            
+            progressEl.textContent = 'Starting upload...';
+            
+            try {
+                // 1. UPLOAD TO FIREBASE STORAGE
+                const storagePath = getStoragePath(file.name, userId);
+                const fileRef = ref(storage, storagePath);
+                const uploadTask = uploadBytesResumable(fileRef, file);
+
+                await new Promise((resolve, reject) => {
+                    uploadTask.on('state_changed', 
+                        (snapshot) => {
+                            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                            progressEl.textContent = `Upload is ${progress.toFixed(0)}% complete...`;
+                        }, 
+                        (error) => reject(error), 
+                        () => resolve()
+                    );
+                });
+
+                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+
+                // 2. SAVE METADATA TO FIRESTORE 
+                await addDoc(getDocumentsCollectionRef(), {
+                    fileName: file.name,
+                    size: file.size,
+                    mimeType: file.type,
+                    ownerId: userId,
+                    storagePath: storagePath, 
+                    downloadURL: downloadURL,
+                    uploadedAt: serverTimestamp(),
+                    sharedWith: [], 
+                });
+                
+                logAction('DOC_UPLOAD_SUCCESS', { message: 'Document metadata saved.', name: file.name });
+                fileInput.value = '';
+                progressEl.textContent = 'Upload Complete!';
+
+            } catch (error) {
+                logAction('DOC_UPLOAD_FAILURE', { file: file.name, message: error.message });
+                progressEl.textContent = `Upload Failed: ${error.message}`;
+            } finally {
+                setTimeout(() => progressEl.classList.add('hidden'), 3000);
+            }
+        }
+
+        // --- Delete Functionality ---
+        function prepareDeleteConfirmation(docId, fileName, ownerId) {
+            currentDeleteParams = { docId, fileName, ownerId };
+            document.getElementById('confirm-message').innerHTML = `Are you sure you want to delete **${fileName}**? This will remove the document permanently for you and any users it was shared with.`;
+            document.getElementById('delete-confirm-modal').classList.remove('hidden');
+            logAction('MODAL_OPEN', { action: 'Delete' });
+        }
+
+        function hideDeleteConfirmation() {
+            document.getElementById('delete-confirm-modal').classList.add('hidden');
+            currentDeleteParams = {};
+            logAction('MODAL_CLOSE', { action: 'Delete' });
+        }
+
+        async function handleConfirmedDelete() {
+            const { docId, fileName, ownerId } = currentDeleteParams;
+            hideDeleteConfirmation();
+
+            if (!docId || !fileName || !ownerId) return;
+
+            try {
+                // 1. DELETE FROM FIREBASE STORAGE
+                // NOTE: This uses the ownerId to construct a plausible ref based on the function `getStoragePath`.
+                const storageRef = ref(storage, getStoragePath(fileName, ownerId)); 
+                
+                await deleteObject(storageRef).catch(e => {
+                    logAction('STORAGE_DELETE_WARN', { message: `Storage file might not exist or failed deletion: ${e.message}` });
+                });
+
+                // 2. DELETE METADATA FROM FIRESTORE
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'documents', docId);
+                await deleteDoc(docRef);
+
+                logAction('DOC_DELETE_SUCCESS', { docId: docId, fileName: fileName });
+
+            } catch (error) {
+                logAction('DOC_DELETE_FAILURE', { docId: docId, message: error.message });
+                const logDisplayEl = document.getElementById('log-display');
+                if (logDisplayEl) {
+                    logDisplayEl.textContent = `ERROR: Failed to delete document. ${error.message}`;
+                    logDisplayEl.classList.remove('hidden');
+                    setTimeout(() => logDisplayEl.classList.add('hidden'), 5000);
+                }
+            }
+        }
+
+        // --- SHARING FUNCTIONALITY ---
+
+        function showShareModal(docId, fileName) {
+            currentShareDocId = docId;
+            document.getElementById('share-modal').classList.remove('hidden');
+            document.getElementById('share-message').classList.add('hidden');
+            document.getElementById('share-uid-input').value = '';
+            document.getElementById('confirm-share-btn').disabled = true;
+            logAction('MODAL_OPEN', { action: 'Share', docId: docId });
+        }
+
+        function hideShareModal() {
+            document.getElementById('share-modal').classList.add('hidden');
+            currentShareDocId = null;
+            logAction('MODAL_CLOSE', { action: 'Share' });
+        }
+
+        async function handleShareDocument() {
+            if (!currentShareDocId || !userId) return;
+
+            const targetUID = document.getElementById('share-uid-input').value.trim();
+            const shareMessageEl = document.getElementById('share-message'); 
+            shareMessageEl.classList.add('hidden');
+            
+            if (!targetUID || targetUID.length < 20 || targetUID === userId) {
+                shareMessageEl.textContent = targetUID === userId 
+                    ? "Cannot share a document with yourself."
+                    : "Please enter a valid recipient User ID (UID).";
+                shareMessageEl.classList.remove('hidden');
+                shareMessageEl.classList.remove('text-green-600', 'bg-green-100');
+                shareMessageEl.classList.add('text-red-600', 'bg-red-100');
+                return;
+            }
+
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'documents', currentShareDocId);
+                
+                await updateDoc(docRef, {
+                    sharedWith: arrayUnion(targetUID)
+                });
+                
+                shareMessageEl.textContent = `Document successfully shared with UID: ${targetUID.substring(0, 8)}...`;
+                shareMessageEl.classList.remove('hidden');
+                shareMessageEl.classList.remove('text-red-600', 'bg-red-100');
+                shareMessageEl.classList.add('text-green-600', 'bg-green-100');
+                
+                logAction('DOC_SHARE_SUCCESS', { docId: currentShareDocId, recipient: targetUID }); 
+                
+                setTimeout(hideShareModal, 2000); 
+
+            } catch (error) {
+                logAction('DOC_SHARE_FAILURE', { docId: currentShareDocId, message: error.message });
+                shareMessageEl.textContent = `Sharing failed: ${error.message}`;
+                shareMessageEl.classList.remove('hidden');
+                shareMessageEl.classList.remove('text-green-600', 'bg-green-100');
+                shareMessageEl.classList.add('text-red-600', 'bg-red-100');
+            }
+        } // The previously missing closing brace
+
+        // ----------------------------------------------------------------------------------
+        // --- CRITICAL INITIALIZATION BLOCK (The part that was previously missing) ---
+        // ----------------------------------------------------------------------------------
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. Auth/UI listeners
+            document.getElementById('toggle-auth').addEventListener('click', (e) => {
+                e.preventDefault();
+                toggleAuthMode(!isLoginMode); 
+            });
+            document.getElementById('auth-button').addEventListener('click', handleAuthAction);
+            document.getElementById('logout-button').addEventListener('click', () => {
+                if (auth) { 
+                    signOut(auth);
+                }
+            });
+
+            // 2. Upload listeners
+            const fileInput = document.getElementById('document-file');
+            document.getElementById('upload-button').addEventListener('click', handleFileUpload);
+            
+            // File input change listener (to enable/disable upload button)
+            const uploadButton = document.getElementById('upload-button');
+            if (fileInput && uploadButton) {
+                fileInput.addEventListener('change', () => {
+                    uploadButton.disabled = !fileInput.files[0];
+                });
+            }
+
+
+            // 3. Delete modal listeners
+            document.getElementById('delete-cancel-btn').addEventListener('click', hideDeleteConfirmation);
+            document.getElementById('delete-confirm-btn').addEventListener('click', handleConfirmedDelete);
+            
+            // 4. Share modal listeners
+            document.getElementById('cancel-share-btn').addEventListener('click', hideShareModal);
+            document.getElementById('confirm-share-btn').addEventListener('click', handleShareDocument);
+
+            // Share UID input listener (to enable/disable share button)
+            const shareUIDInput = document.getElementById('share-uid-input');
+            const confirmShareBtn = document.getElementById('confirm-share-btn');
+            
+            if (shareUIDInput && confirmShareBtn) {
+                shareUIDInput.addEventListener('input', (e) => {
+                    confirmShareBtn.disabled = e.target.value.trim().length < 20; 
+                });
+            }
+
+            // 5. Initialize Firebase
+            initFirebase();
+        });
+
+    </script>
 </body>
 </html>
